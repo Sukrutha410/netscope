@@ -1,0 +1,28 @@
+from scan import run_scan, parse_hosts, save_results
+
+app = Flask(__name__)
+
+def load_latest_scan():
+    filename = "scan_history.json"
+    if not os.path.exists(filename):
+        return None
+    with open(filename, "r") as f:
+        history = json.load(f)
+    if not history:
+        return None
+    return history[-1]
+
+@app.route("/")
+def index():
+    latest = load_latest_scan()
+    return render_template("index.html", scan=latest)
+
+@app.route("/scan", methods=["POST"])
+def scan_now():
+    xml_output = run_scan()
+    hosts = parse_hosts(xml_output)
+    save_results(hosts)
+    return redirect(url_for("index"))
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True, use_reloader=False)

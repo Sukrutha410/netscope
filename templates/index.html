@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NetScope Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f4; }
+        table { border-collapse: collapse; width: 100%; background: white; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #333; color: white; }
+        select { padding: 8px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <h1>NetScope — Network Dashboard</h1>
+    <form action="/scan" method="POST">
+        <button type="submit" style="padding: 10px 20px; background: #333; color: white; border: none; cursor: pointer; margin-bottom: 20px;">
+            🔄 Scan Now
+        </button>
+    </form>
+
+    {% if history %}
+    <form action="/" method="GET">
+        <label for="scan">View past scan:</label>
+        <select name="scan" onchange="this.form.submit()">
+            {% for h in history %}
+            <option value="{{ loop.index0 }}" {% if loop.index0 == selected_index %}selected{% endif %}>
+                {{ h.scan_time }}{% if loop.index0 == history|length - 1 %} (latest){% endif %}
+            </option>
+            {% endfor %}
+        </select>
+    </form>
+    {% endif %}
+
+    {% if scan %}
+        <p>Viewing scan: {{ scan.scan_time }}</p>
+        <table>
+            <tr><th>IP Address</th><th>MAC Address</th><th>Hostname</th></tr>
+            {% for host in scan.hosts %}
+            <tr {% if host.ip in new_ips %}style="background: #ffe08a;"{% endif %}>
+                <td>{{ host.ip }} {% if host.ip in new_ips %}<strong>🆕 NEW</strong>{% endif %}</td>
+                <td>{{ host.mac or "N/A" }}</td>
+                <td>{{ host.hostname or "Unknown" }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>No scan data found. Run scan.py first.</p>
+    {% endif %}
+</body>
+</html>
