@@ -2,12 +2,16 @@
 <html>
 <head>
     <title>NetScope Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f4; }
         table { border-collapse: collapse; width: 100%; background: white; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top; }
         th { background: #333; color: white; }
         select { padding: 8px; margin-bottom: 10px; }
+        .port-tag { display: inline-block; background: #e0e0e0; border-radius: 4px; padding: 2px 8px; margin: 2px; font-size: 0.85em; }
+        .no-ports { color: #999; font-style: italic; }
+        .chart-box { background: white; padding: 20px; margin-bottom: 20px; max-width: 900px; }
     </style>
 </head>
 <body>
@@ -17,6 +21,34 @@
             🔄 Scan Now
         </button>
     </form>
+
+    {% if chart_data %}
+    <div class="chart-box">
+        <canvas id="deviceChart" height="80"></canvas>
+    </div>
+    <script>
+        const ctx = document.getElementById('deviceChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: {{ chart_data.labels | tojson }},
+                datasets: [{
+                    label: 'Devices found per scan',
+                    data: {{ chart_data.counts | tojson }},
+                    borderColor: '#333',
+                    backgroundColor: 'rgba(51, 51, 51, 0.1)',
+                    fill: true,
+                    tension: 0.2
+                }]
+            },
+            options: {
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                }
+            }
+        });
+    </script>
+    {% endif %}
 
     {% if history %}
     <form action="/" method="GET">
@@ -34,12 +66,21 @@
     {% if scan %}
         <p>Viewing scan: {{ scan.scan_time }}</p>
         <table>
-            <tr><th>IP Address</th><th>MAC Address</th><th>Hostname</th></tr>
+            <tr><th>IP Address</th><th>MAC Address</th><th>Hostname</th><th>Open Ports</th></tr>
             {% for host in scan.hosts %}
             <tr {% if host.ip in new_ips %}style="background: #ffe08a;"{% endif %}>
                 <td>{{ host.ip }} {% if host.ip in new_ips %}<strong>🆕 NEW</strong>{% endif %}</td>
                 <td>{{ host.mac or "N/A" }}</td>
                 <td>{{ host.hostname or "Unknown" }}</td>
+                <td>
+                    {% if host.ports %}
+                        {% for p in host.ports %}
+                        <span class="port-tag">{{ p.port }}/{{ p.protocol }} ({{ p.service }})</span>
+                        {% endfor %}
+                    {% else %}
+                        <span class="no-ports">No open ports found</span>
+                    {% endif %}
+                </td>
             </tr>
             {% endfor %}
         </table>

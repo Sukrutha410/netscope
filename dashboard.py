@@ -21,11 +21,22 @@ def get_new_devices(history, index):
     
     return current_ips - previous_ips
 
+def get_chart_data(history):
+    """Build a simple summary: one point per scan, showing device count."""
+    labels = []
+    device_counts = []
+    
+    for entry in history:
+        labels.append(entry["scan_time"])
+        device_counts.append(len(entry["hosts"]))
+    
+    return {"labels": labels, "counts": device_counts}
+
 @app.route("/")
 def index():
     history = load_history()
     if not history:
-        return render_template("index.html", scan=None, new_ips=set(), history=[], selected_index=None)
+        return render_template("index.html", scan=None, new_ips=set(), history=[], selected_index=None, chart_data=None)
     
     selected_index = request.args.get("scan", type=int)
     if selected_index is None or selected_index < 0 or selected_index >= len(history):
@@ -33,13 +44,15 @@ def index():
     
     scan = history[selected_index]
     new_ips = get_new_devices(history, selected_index)
+    chart_data = get_chart_data(history)
     
     return render_template(
         "index.html",
         scan=scan,
         new_ips=new_ips,
         history=history,
-        selected_index=selected_index
+        selected_index=selected_index,
+        chart_data=chart_data
     )
 
 @app.route("/scan", methods=["POST"])
