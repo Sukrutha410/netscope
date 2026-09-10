@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 scan_history.json
 scan.log
+config.py
