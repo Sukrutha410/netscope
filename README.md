@@ -61,3 +61,7 @@ Only scan networks you own or have explicit permission to scan.
 
 ## Author
 Sukrutha — built as part of a self-directed cybersecurity learning path (Linux, networking, Python fundamentals).
+
+## Email Alerts
+NetScope sends an email notification whenever a new device is detected on the network, whether triggered manually, via the dashboard, or through the automated cron scan. Requires a `config.py` file (not included, gitignored) with:
+Uses a Gmail App Password (not your real password) for secure SMTP authentication.

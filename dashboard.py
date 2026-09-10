@@ -1,7 +1,7 @@
 from flask import Flask, render_template, redirect, url_for, request
 import json
 import os
-from scan import run_scan, parse_hosts, save_results
+from scan import run_scan, parse_hosts, save_results, find_new_devices, send_alert_email
 
 app = Flask(__name__)
 
@@ -22,7 +22,6 @@ def get_new_devices(history, index):
     return current_ips - previous_ips
 
 def get_chart_data(history):
-    """Build a simple summary: one point per scan, showing device count."""
     labels = []
     device_counts = []
     
@@ -59,7 +58,12 @@ def index():
 def scan_now():
     xml_output = run_scan()
     hosts = parse_hosts(xml_output)
-    save_results(hosts)
+    history = save_results(hosts)
+    
+    new_hosts = find_new_devices(history)
+    if new_hosts:
+        send_alert_email(new_hosts)
+    
     return redirect(url_for("index"))
 
 if __name__ == "__main__":

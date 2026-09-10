@@ -2,7 +2,10 @@ import subprocess
 import xml.etree.ElementTree as ET
 import json
 import os
+import smtplib
+from email.mime.text import MIMEText
 from datetime import datetime
+from config import SENDER_EMAIL, APP_PASSWORD, RECEIVER_EMAIL
 
 def run_scan(subnet="192.168.221.0/24"):
     print(f"Scanning {subnet}...")
@@ -96,6 +99,42 @@ def save_results(hosts, filename="scan_history.json"):
         json.dump(history, f, indent=2)
     
     print(f"Saved scan to {filename} ({len(history)} scans total in history)")
+    
+    return history
+
+def find_new_devices(history):
+    """Compare the latest scan to the previous one, return list of new IPs."""
+    if len(history) < 2:
+        return []
+    
+    latest_ips = {h["ip"] for h in history[-1]["hosts"]}
+    previous_ips = {h["ip"] for h in history[-2]["hosts"]}
+    
+    new_ips = latest_ips - previous_ips
+    
+    # Return full host info for new IPs, not just the IP string
+    new_hosts = [h for h in history[-1]["hosts"] if h["ip"] in new_ips]
+    return new_hosts
+
+def send_alert_email(new_hosts):
+    """Send an email listing newly detected devices."""
+    body_lines = ["NetScope detected new device(s) on your network:\n"]
+    for h in new_hosts:
+        body_lines.append(f"- IP: {h['ip']} | MAC: {h['mac'] or 'N/A'} | Hostname: {h['hostname'] or 'Unknown'}")
+    body = "\n".join(body_lines)
+    
+    msg = MIMEText(body)
+    msg["Subject"] = f"NetScope Alert: {len(new_hosts)} new device(s) detected"
+    msg["From"] = SENDER_EMAIL
+    msg["To"] = RECEIVER_EMAIL
+    
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(SENDER_EMAIL, APP_PASSWORD)
+            server.send_message(msg)
+        print(f"Alert email sent for {len(new_hosts)} new device(s).")
+    except Exception as e:
+        print(f"Failed to send alert email: {e}")
 
 if __name__ == "__main__":
     xml_output = run_scan()
@@ -105,4 +144,11 @@ if __name__ == "__main__":
     for h in hosts:
         print(h)
     
-    save_results(hosts)
+    history = save_results(hosts)
+    
+    new_hosts = find_new_devices(history)
+    if new_hosts:
+        print(f"\n{len(new_hosts)} new device(s) detected — sending alert email...")
+        send_alert_email(new_hosts)
+    else:
+        print("\nNo new devices detected.")
